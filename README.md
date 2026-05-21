@@ -20,15 +20,23 @@
 
 | 命令 | 说明 |
 |------|------|
-| `/mapart apply <图片文件名>` | 将图片转换为地图画 |
+| `/mapart apply <图片文件名> [scale|tile]` | 将图片转换为地图画（scale: 缩放, tile: 切分） |
 | `/mapart clear` | 清除所有地图画 |
 | `/mapart info` | 查看持有的地图数量 |
 | `/mapart list` | 列出可用的图片文件 |
 
 **示例:**
 ```
-/mapart apply myimage.png
+/mapart apply myimage.png        # 缩放到单张地图
+/mapart apply myimage.png tile   # 切分为多张地图（大图拼接）
 ```
+
+### 两种模式
+
+| 模式 | 命令 | 说明 |
+|------|------|------|
+| **缩放 (scale)** | `/mapart apply <图片>` | 默认模式，将图片缩放到 128x128 像素，输出 1 张地图 |
+| **切分 (tile)** | `/mapart apply <图片> tile` | 不缩放，按 128x128 切分图片，输出多张地图可拼接成大图 |
 
 ## 推荐图片尺寸
 

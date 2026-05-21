@@ -42,8 +42,10 @@ public class MapArtManager {
 
     /**
      * 从文件加载图片并创建地图画
+     * 
+     * @param mode SCALE: 缩放到单张地图, TILE: 切分为多张地图
      */
-    public CompletableFuture<MapArtResult> createMapArt(Player player, String imageName) {
+    public CompletableFuture<MapArtResult> createMapArt(Player player, String imageName, MapArtRenderer.Mode mode) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 File imageFile = new File(plugin.getPluginConfig().getImageDirectory(), imageName);
@@ -56,7 +58,6 @@ public class MapArtManager {
                     return new MapArtResult(false, "无法读取图片文件，格式可能不支持");
                 }
 
-                // 检查图片尺寸
                 if (image.getWidth() > plugin.getPluginConfig().getMaxImageWidth() ||
                     image.getHeight() > plugin.getPluginConfig().getMaxImageHeight()) {
                     return new MapArtResult(false, 
@@ -66,12 +67,10 @@ public class MapArtManager {
                 }
 
                 int mapSize = plugin.getPluginConfig().getMapSize();
-                int mapCount = renderer.getRequiredMapCount(image, mapSize);
+                int mapCount = renderer.getRequiredMapCount(image, mapSize, mode);
                 
-                // 渲染图片到地图
-                byte[][] mapData = renderer.renderLargeImage(image, mapSize);
+                byte[][] mapData = renderer.renderImage(image, mapSize, mode);
                 
-                // 创建地图物品
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     for (byte[] data : mapData) {
                         MapView mapView = Bukkit.createMap(player.getWorld());
@@ -79,14 +78,12 @@ public class MapArtManager {
                         mapView.setTrackingPosition(false);
                         mapView.setUnlimitedTracking(false);
                         
-                        // 清除默认渲染器并添加自定义渲染器
                         mapView.removeRenderer(mapView.getRenderers().iterator().next());
                         mapView.addRenderer(new MapArtMapRenderer(data, mapSize));
                         
                         int id = mapView.getId();
                         mapArtData.put((short) id, data);
                         
-                        // 给玩家地图物品
                         ItemStack mapItem = new ItemStack(Material.FILLED_MAP);
                         MapMeta meta = (MapMeta) mapItem.getItemMeta();
                         meta.setMapView(mapView);
@@ -96,8 +93,9 @@ public class MapArtManager {
                     }
                 });
 
+                String modeName = mode == MapArtRenderer.Mode.TILE ? "切分" : "缩放";
                 return new MapArtResult(true, 
-                    String.format("成功创建地图画！共 %d 张地图", mapCount));
+                    String.format("成功创建地图画（%s模式）！共 %d 张地图", modeName, mapCount));
                     
             } catch (IOException e) {
                 return new MapArtResult(false, "处理图片时出错: " + e.getMessage());

@@ -10,6 +10,11 @@ import java.awt.image.BufferedImage;
  */
 public class MapArtRenderer {
 
+    public enum Mode {
+        SCALE,
+        TILE
+    }
+
     /**
      * 将 BufferedImage 转换为 Minecraft 地图字节数组
      * 
@@ -20,7 +25,6 @@ public class MapArtRenderer {
     public byte[] renderToMap(BufferedImage image, int mapSize) {
         byte[] result = new byte[mapSize * mapSize];
         
-        // 缩放图片到地图尺寸
         BufferedImage scaled = resizeImage(image, mapSize, mapSize);
         
         for (int y = 0; y < mapSize; y++) {
@@ -36,17 +40,28 @@ public class MapArtRenderer {
     }
 
     /**
-     * 将大图片分割成多个地图块
+     * 根据模式渲染图片
      * 
      * @param image 输入图片
-     * @param mapSize 每个地图块的尺寸
-     * @return 二维数组，每个元素是一个地图块的字节数组
+     * @param mapSize 地图尺寸
+     * @param mode SCALE: 缩放到单张地图, TILE: 切分为多张地图
+     * @return 地图字节数组
      */
-    public byte[][] renderLargeImage(BufferedImage image, int mapSize) {
+    public byte[][] renderImage(BufferedImage image, int mapSize, Mode mode) {
+        if (mode == Mode.TILE) {
+            return renderTileImage(image, mapSize);
+        }
+        BufferedImage scaled = resizeImage(image, mapSize, mapSize);
+        return new byte[][]{renderToMap(scaled, mapSize)};
+    }
+
+    /**
+     * 将图片按 mapSize 切分为多个地图块（不缩放）
+     */
+    private byte[][] renderTileImage(BufferedImage image, int mapSize) {
         int imageWidth = image.getWidth();
         int imageHeight = image.getHeight();
         
-        // 计算需要多少张地图
         int mapsX = (int) Math.ceil((double) imageWidth / mapSize);
         int mapsY = (int) Math.ceil((double) imageHeight / mapSize);
         
@@ -54,7 +69,6 @@ public class MapArtRenderer {
         
         for (int mapY = 0; mapY < mapsY; mapY++) {
             for (int mapX = 0; mapX < mapsX; mapX++) {
-                // 提取当前地图块的区域
                 int x = mapX * mapSize;
                 int y = mapY * mapSize;
                 int width = Math.min(mapSize, imageWidth - x);
@@ -62,7 +76,6 @@ public class MapArtRenderer {
                 
                 BufferedImage subImage = image.getSubimage(x, y, width, height);
                 
-                // 如果不足 mapSize，需要填充
                 if (width < mapSize || height < mapSize) {
                     BufferedImage padded = new BufferedImage(mapSize, mapSize, BufferedImage.TYPE_INT_ARGB);
                     Graphics2D g = padded.createGraphics();
@@ -75,7 +88,6 @@ public class MapArtRenderer {
             }
         }
         
-        // 展平为一维数组
         int totalMaps = mapsX * mapsY;
         byte[][] flatResult = new byte[totalMaps][];
         int index = 0;
@@ -101,13 +113,18 @@ public class MapArtRenderer {
     }
 
     /**
-     * 获取图片需要的地图数量
+     * 获取需要的总地图数量
+     * 
+     * @param image 输入图片
+     * @param mapSize 地图尺寸
+     * @param mode SCALE: 始终 1 张, TILE: 按实际切分计算
      */
-    public int getRequiredMapCount(BufferedImage image, int mapSize) {
-        int imageWidth = image.getWidth();
-        int imageHeight = image.getHeight();
-        int mapsX = (int) Math.ceil((double) imageWidth / mapSize);
-        int mapsY = (int) Math.ceil((double) imageHeight / mapSize);
-        return mapsX * mapsY;
+    public int getRequiredMapCount(BufferedImage image, int mapSize, Mode mode) {
+        if (mode == Mode.TILE) {
+            int mapsX = (int) Math.ceil((double) image.getWidth() / mapSize);
+            int mapsY = (int) Math.ceil((double) image.getHeight() / mapSize);
+            return mapsX * mapsY;
+        }
+        return 1;
     }
 }

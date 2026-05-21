@@ -20,15 +20,23 @@ A map art plugin for Purpur/Paper servers that allows players to convert custom 
 
 | Command | Description |
 |---------|-------------|
-| `/mapart apply <image file>` | Convert an image to map art |
+| `/mapart apply <image file> [scale|tile]` | Convert image to map art (scale: fit single map, tile: split into grid) |
 | `/mapart clear` | Clear all map art |
 | `/mapart info` | View number of maps you hold |
 | `/mapart list` | List available image files |
 
 **Example:**
 ```
-/mapart apply myimage.png
+/mapart apply myimage.png           # Scale to single map (default)
+/mapart apply myimage.png tile      # Split into multiple maps for large image
 ```
+
+### Two Modes
+
+| Mode | Command | Description |
+|------|---------|-------------|
+| **Scale** | `/mapart apply <image>` | Default. Scales image to 128x128, outputs 1 map |
+| **Tile** | `/mapart apply <image> tile` | No scaling. Splits image into 128x128 tiles, outputs multiple maps for mosaic |
 
 ## Recommended Image Size
 

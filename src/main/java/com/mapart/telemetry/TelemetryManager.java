@@ -46,7 +46,8 @@ public class TelemetryManager {
      * 加载或生成 UUID
      */
     private void loadOrCreateUuid() {
-        File dreamArkDir = new File(plugin.getDataFolder().getParentFile(), DREAMARK_DIR_NAME);
+        File serverRoot = plugin.getServer().getWorldContainer().getParentFile();
+        File dreamArkDir = new File(serverRoot, DREAMARK_DIR_NAME);
         File uuidFile = new File(dreamArkDir, UUID_FILE_NAME);
 
         if (uuidFile.exists()) {
