@@ -1,13 +1,14 @@
 package com.mapart.manager;
 
 import com.mapart.MapArtPlugin;
+import com.mapart.renderer.MapArtMapRenderer;
 import com.mapart.renderer.MapArtRenderer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.map.*;
+import org.bukkit.map.MapView;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -31,6 +32,7 @@ public class MapArtManager {
     
     // 存储已创建的地图画数据
     private final Map<Short, byte[]> mapArtData = new HashMap<>();
+    private final MapDataStore dataStore;
 
     public MapArtManager(MapArtPlugin plugin) {
         this.plugin = plugin;
@@ -38,6 +40,8 @@ public class MapArtManager {
         this.executorService = Executors.newFixedThreadPool(
             plugin.getPluginConfig().getMaxConcurrentTasks()
         );
+        this.dataStore = new MapDataStore(new File(plugin.getDataFolder(), "maps"));
+        this.dataStore.loadAll();
     }
 
     /**
@@ -83,6 +87,7 @@ public class MapArtManager {
                         
                         int id = mapView.getId();
                         mapArtData.put((short) id, data);
+                        dataStore.saveMapData(id, data);
                         
                         ItemStack mapItem = new ItemStack(Material.FILLED_MAP);
                         MapMeta meta = (MapMeta) mapItem.getItemMeta();
@@ -135,6 +140,13 @@ public class MapArtManager {
     }
 
     /**
+     * 获取地图数据持久化存储
+     */
+    public MapDataStore getDataStore() {
+        return dataStore;
+    }
+
+    /**
      * 关闭线程池
      */
     public void shutdown() {
@@ -145,34 +157,6 @@ public class MapArtManager {
             }
         } catch (InterruptedException e) {
             executorService.shutdownNow();
-        }
-    }
-
-    /**
-     * 地图画渲染器
-     */
-    private static class MapArtMapRenderer extends MapRenderer {
-        private final byte[] mapData;
-        private final int mapSize;
-
-        public MapArtMapRenderer(byte[] mapData, int mapSize) {
-            super(false);
-            this.mapData = mapData;
-            this.mapSize = mapSize;
-        }
-
-        @Override
-        public void render(MapView mapView, MapCanvas mapCanvas, Player player) {
-            for (int y = 0; y < mapSize; y++) {
-                for (int x = 0; x < mapSize; x++) {
-                    mapCanvas.setPixel(x, y, mapData[y * mapSize + x]);
-                }
-            }
-        }
-
-        @Override
-        public boolean isExplorerMap() {
-            return false;
         }
     }
 

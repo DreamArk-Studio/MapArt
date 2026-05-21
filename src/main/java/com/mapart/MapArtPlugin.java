@@ -2,6 +2,8 @@ package com.mapart;
 
 import com.mapart.command.MapArtCommand;
 import com.mapart.config.PluginConfig;
+import com.mapart.listener.MapRenderListener;
+import com.mapart.manager.MapArtManager;
 import com.mapart.telemetry.TelemetryManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -10,6 +12,7 @@ public final class MapArtPlugin extends JavaPlugin {
     private PluginConfig config;
     private MapArtCommand mapArtCommand;
     private TelemetryManager telemetryManager;
+    private MapArtManager manager;
 
     @Override
     public void onEnable() {
@@ -21,9 +24,12 @@ public final class MapArtPlugin extends JavaPlugin {
         config = new PluginConfig(this);
         config.load();
 
+        manager = new MapArtManager(this);
         mapArtCommand = new MapArtCommand(this);
         getCommand("mapart").setExecutor(mapArtCommand);
         getCommand("mapart").setTabCompleter(mapArtCommand);
+
+        getServer().getPluginManager().registerEvents(new MapRenderListener(this), this);
 
         telemetryManager = new TelemetryManager(this);
         telemetryManager.init();
@@ -44,5 +50,9 @@ public final class MapArtPlugin extends JavaPlugin {
 
     public PluginConfig getPluginConfig() {
         return config;
+    }
+
+    public MapArtManager getManager() {
+        return manager;
     }
 }
