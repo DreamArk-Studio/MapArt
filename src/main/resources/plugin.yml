@@ -1,0 +1,22 @@
+name: MapArt
+version: '${project.version}'
+main: com.mapart.MapArtPlugin
+api-version: '1.21'
+author: MapArt
+description: A map art plugin for Purpur/Paper servers
+folia-supported: true
+
+commands:
+  mapart:
+    description: Main command for MapArt
+    usage: /<command> [apply|clear|info]
+    permission: mapart.use
+    aliases: [ma]
+
+permissions:
+  mapart.use:
+    description: Allows using map art commands
+    default: op
+  mapart.admin:
+    description: Admin permissions for MapArt
+    default: op

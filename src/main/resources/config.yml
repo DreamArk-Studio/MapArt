@@ -1,0 +1,16 @@
+# MapArk 配置文件
+
+# 最大图片宽度（像素）
+max-image-width: 2048
+
+# 最大图片高度（像素）
+max-image-height: 2048
+
+# 地图尺寸（像素），标准地图为 128x128
+map-size: 128
+
+# 是否启用异步处理
+async-processing: true
+
+# 最大并发任务数
+max-concurrent-tasks: 4
