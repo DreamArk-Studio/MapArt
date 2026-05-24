@@ -14,6 +14,10 @@ public class PluginConfig {
     private boolean asyncProcessing;
     private int maxConcurrentTasks;
     private File imageDirectory;
+    private boolean webServerEnabled;
+    private String webServerHost;
+    private int webServerPort;
+    private String webPublicUrl;
 
     public PluginConfig(MapArtPlugin plugin) {
         this.plugin = plugin;
@@ -25,6 +29,10 @@ public class PluginConfig {
         plugin.getConfig().addDefault("map-size", 128);
         plugin.getConfig().addDefault("async-processing", true);
         plugin.getConfig().addDefault("max-concurrent-tasks", 4);
+        plugin.getConfig().addDefault("web-server.enabled", true);
+        plugin.getConfig().addDefault("web-server.host", "0.0.0.0");
+        plugin.getConfig().addDefault("web-server.port", 8080);
+        plugin.getConfig().addDefault("web-server.public-url", "https://map.yourserver.com");
         
         plugin.getConfig().options().copyDefaults(true);
         plugin.saveConfig();
@@ -39,6 +47,11 @@ public class PluginConfig {
         if (!imageDirectory.exists()) {
             imageDirectory.mkdirs();
         }
+
+        this.webServerEnabled = plugin.getConfig().getBoolean("web-server.enabled", true);
+        this.webServerHost = plugin.getConfig().getString("web-server.host", "0.0.0.0");
+        this.webServerPort = plugin.getConfig().getInt("web-server.port", 8080);
+        this.webPublicUrl = plugin.getConfig().getString("web-server.public-url", "https://map.yourserver.com");
     }
 
     public int getMaxImageWidth() {
@@ -63,5 +76,21 @@ public class PluginConfig {
 
     public File getImageDirectory() {
         return imageDirectory;
+    }
+
+    public boolean isWebServerEnabled() {
+        return webServerEnabled;
+    }
+
+    public String getWebServerHost() {
+        return webServerHost;
+    }
+
+    public int getWebServerPort() {
+        return webServerPort;
+    }
+
+    public String getWebPublicUrl() {
+        return webPublicUrl;
     }
 }

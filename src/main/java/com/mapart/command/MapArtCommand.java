@@ -24,7 +24,7 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
 
     public MapArtCommand(MapArtPlugin plugin) {
         this.plugin = plugin;
-        this.manager = new MapArtManager(plugin);
+        this.manager = plugin.getManager();
     }
 
     @Override
@@ -35,11 +35,13 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 0) {
-            sendHelp(player);
+            player.performCommand("mapart gui");
             return true;
         }
 
         switch (args[0].toLowerCase()) {
+            case "gui" -> handleGui(player);
+            case "upload" -> handleUpload(player);
             case "apply" -> handleApply(player, args);
             case "clear" -> handleClear(player);
             case "info" -> handleInfo(player);
@@ -48,6 +50,18 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
         }
 
         return true;
+    }
+
+    private void handleGui(Player player) {
+        plugin.getGui().open(player);
+    }
+
+    private void handleUpload(Player player) {
+        String token = plugin.getTokenManager().createToken(player.getUniqueId(), player.getName());
+        String uploadUrl = plugin.getPluginConfig().getWebPublicUrl() + "/upload?token=" + token;
+        player.sendMessage("§a点击链接上传图片（有效期为5分钟）：");
+        player.sendMessage("§6§n" + uploadUrl);
+        player.sendMessage("§7提示：上传成功后使用 §e/mapart gui §7查看并使用图片");
     }
 
     private void handleApply(Player player, String[] args) {
@@ -103,7 +117,7 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
             String lower = name.toLowerCase();
             return lower.endsWith(".png") || lower.endsWith(".jpg") || 
                    lower.endsWith(".jpeg") || lower.endsWith(".gif") || 
-                   lower.endsWith(".bmp");
+                   lower.endsWith(".bmp") || lower.endsWith(".webp");
         });
 
         if (images == null || images.length == 0) {
@@ -119,6 +133,9 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
 
     private void sendHelp(Player player) {
         player.sendMessage("§6§l=== MapArt 帮助 ===");
+        player.sendMessage("§e/mapart §7- 打开图形界面");
+        player.sendMessage("§e/mapart gui §7- 打开图形界面");
+        player.sendMessage("§e/mapart upload §7- 获取网页上传链接");
         player.sendMessage("§e/mapart apply <图片> [scale|tile] §7- 将图片转换为地图画");
         player.sendMessage("§e/mapart clear §7- 清除所有地图画");
         player.sendMessage("§e/mapart info §7- 查看地图画信息");
@@ -133,7 +150,7 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 1) {
-            List<String> subCommands = Arrays.asList("apply", "clear", "info", "list");
+            List<String> subCommands = Arrays.asList("gui", "upload", "apply", "clear", "info", "list");
             return subCommands.stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());

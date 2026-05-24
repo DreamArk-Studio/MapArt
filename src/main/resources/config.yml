@@ -14,3 +14,11 @@ async-processing: true
 
 # 最大并发任务数
 max-concurrent-tasks: 4
+
+# Web 上传服务器配置
+web-server:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8080
+  # 上传页面地址（用于给玩家显示的链接）
+  public-url: "https://map.yourserver.com"
