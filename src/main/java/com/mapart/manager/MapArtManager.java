@@ -94,7 +94,7 @@ public class MapArtManager {
                         meta.setMapView(mapView);
                         mapItem.setItemMeta(meta);
                         
-                        player.getInventory().addItem(mapItem);
+                        addToRightHotbar(player, mapItem);
                     }
                 });
 
@@ -144,6 +144,17 @@ public class MapArtManager {
      */
     public MapDataStore getDataStore() {
         return dataStore;
+    }
+
+    private void addToRightHotbar(Player player, ItemStack item) {
+        for (int slot = 8; slot >= 0; slot--) {
+            ItemStack existing = player.getInventory().getItem(slot);
+            if (existing == null || existing.getType().isAir()) {
+                player.getInventory().setItem(slot, item);
+                return;
+            }
+        }
+        player.getInventory().addItem(item);
     }
 
     /**
