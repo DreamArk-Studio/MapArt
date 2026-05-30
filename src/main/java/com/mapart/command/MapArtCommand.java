@@ -73,9 +73,15 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
             }
         });
         player.sendMessage("§a点击链接上传图片（有效期5分钟）：");
-        player.spigot().sendMessage(
-                net.md_5.bungee.api.chat.TextComponent.fromLegacy(
-                        "§6[点击打开上传页面](" + uploadUrl + ")"));
+        var clickMsg = new net.md_5.bungee.api.chat.TextComponent("§6§n点击打开上传页面");
+        clickMsg.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.OPEN_URL, uploadUrl));
+        clickMsg.setHoverEvent(new net.md_5.bungee.api.chat.HoverEvent(
+                net.md_5.bungee.api.chat.HoverEvent.Action.SHOW_TEXT,
+                new net.md_5.bungee.api.chat.TextComponent("点击打开上传链接\n" + uploadUrl)
+        ));
+        player.spigot().sendMessage(clickMsg);
+        player.sendMessage("§7如果链接不可点击，请复制下方网址到浏览器打开：");
+        player.sendMessage("§f" + uploadUrl);
         player.sendMessage("§7提示：上传成功后使用 §e/mapart gui §7查看并使用图片");
     }
 
