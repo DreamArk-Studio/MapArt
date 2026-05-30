@@ -53,14 +53,17 @@ public class MapArtManager {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 File imageFile = plugin.getPluginConfig().getImageFile(imageName);
-                if (!imageFile.exists()) {
-                    plugin.getLogger().warning("Image not found: " + imageName + " -> " + imageFile.getAbsolutePath());
-                    return new MapArtResult(false, "图片文件不存在: " + imageName + " (查找: " + imageFile.getAbsolutePath() + ")");
-                }
 
-                BufferedImage image = ImageIO.read(imageFile);
+                BufferedImage image;
+                try {
+                    image = ImageIO.read(imageFile);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to read image: " + imageName + " -> " + imageFile.getAbsolutePath() + " : " + e.getMessage());
+                    return new MapArtResult(false, "无法读取图片文件: " + imageName);
+                }
                 if (image == null) {
-                    return new MapArtResult(false, "无法读取图片文件，格式可能不支持");
+                    plugin.getLogger().warning("Image returned null: " + imageName + " -> " + imageFile.getAbsolutePath());
+                    return new MapArtResult(false, "无法读取图片文件，格式可能不支持: " + imageName);
                 }
 
                 if (image.getWidth() > plugin.getPluginConfig().getMaxImageWidth() ||
@@ -103,7 +106,7 @@ public class MapArtManager {
                 return new MapArtResult(true, 
                     String.format("成功创建地图画（%s模式）！共 %d 张地图", modeName, mapCount));
                     
-            } catch (IOException e) {
+            } catch (Exception e) {
                 return new MapArtResult(false, "处理图片时出错: " + e.getMessage());
             }
         }, executorService);

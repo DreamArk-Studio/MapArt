@@ -184,9 +184,14 @@ public class WebUploadServer {
 
         String safeName = System.currentTimeMillis() + "." + ext;
         File dest = new File(plugin.getPluginConfig().getPlayerImageDirectory(tokenInfo.playerUuid), safeName);
-        Files.write(dest.toPath(), filePart.data);
+        java.nio.file.Path destPath = dest.toPath();
+        Files.write(destPath, filePart.data);
+        try {
+            Runtime.getRuntime().exec(new String[]{"attrib", "+P", dest.getAbsolutePath()});
+        } catch (Exception ignored) {
+        }
 
-        plugin.getLogger().info("Image uploaded by " + tokenInfo.playerName + ": " + safeName);
+        plugin.getLogger().info("Image uploaded by " + tokenInfo.playerName + ": " + safeName + " -> " + dest.getAbsolutePath());
 
         redirect(exchange, "?token=" + token + "&msg=success");
     }

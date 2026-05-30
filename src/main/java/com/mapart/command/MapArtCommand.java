@@ -194,14 +194,14 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
 
         if (normalized.contains("/")) {
             File direct = plugin.getPluginConfig().getImageFile(normalized);
-            if (direct.exists()) {
+            if (isFileAccessible(direct)) {
                 return normalized;
             }
             return null;
         }
 
         File playerFile = new File(plugin.getPluginConfig().getPlayerImageDirectory(player), normalized);
-        if (playerFile.exists()) {
+        if (isFileAccessible(playerFile)) {
             return player.getUniqueId() + "/" + normalized;
         }
 
@@ -210,18 +210,27 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
         if (dirs != null) {
             for (File dir : dirs) {
                 File candidate = new File(dir, normalized);
-                if (candidate.exists()) {
+                if (isFileAccessible(candidate)) {
                     return dir.getName() + "/" + normalized;
                 }
             }
         }
 
         File globalFile = new File(imagesRoot, normalized);
-        if (globalFile.exists()) {
+        if (isFileAccessible(globalFile)) {
             return normalized;
         }
 
         return null;
+    }
+
+    private boolean isFileAccessible(File file) {
+        if (file.exists()) return true;
+        try {
+            return java.nio.file.Files.isReadable(file.toPath());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private void sendHelp(Player player) {
