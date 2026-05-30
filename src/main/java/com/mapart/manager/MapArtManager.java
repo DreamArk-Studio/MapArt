@@ -54,7 +54,8 @@ public class MapArtManager {
             try {
                 File imageFile = plugin.getPluginConfig().getImageFile(imageName);
                 if (!imageFile.exists()) {
-                    return new MapArtResult(false, "图片文件不存在: " + imageName);
+                    plugin.getLogger().warning("Image not found: " + imageName + " -> " + imageFile.getAbsolutePath());
+                    return new MapArtResult(false, "图片文件不存在: " + imageName + " (查找: " + imageFile.getAbsolutePath() + ")");
                 }
 
                 BufferedImage image = ImageIO.read(imageFile);

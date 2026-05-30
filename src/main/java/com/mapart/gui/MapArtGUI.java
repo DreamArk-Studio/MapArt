@@ -1,6 +1,7 @@
 package com.mapart.gui;
 
 import com.mapart.MapArtPlugin;
+import com.mapart.renderer.MapArtRenderer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -19,6 +20,7 @@ public class MapArtGUI implements Listener {
 
     private static final String GUI_TITLE = "§6§lMapArt 地图画";
     private static final int GUI_SIZE = 54;
+    private static final String RELATIVE_PREFIX = "§8";
 
     private final MapArtPlugin plugin;
     private final Map<UUID, Integer> playerPages = new HashMap<>();
@@ -33,166 +35,131 @@ public class MapArtGUI implements Listener {
     }
 
     private void openPage(Player player, int page) {
-        List<File> imageList = listPlayerImages(player);
+        File imagesRoot = plugin.getPluginConfig().getImageDirectory();
+        File playerDir = plugin.getPluginConfig().getPlayerImageDirectory(player.getUniqueId());
+        List<ImageEntry> entries = new ArrayList<>();
+        collectImageFiles(imagesRoot, playerDir, entries);
+        entries.sort(Comparator.comparingLong(e -> e.file.lastModified()));
+
         int itemsPerPage = 28;
-        int totalPages = Math.max(1, (int) Math.ceil((double) imageList.size() / itemsPerPage));
+        int totalPages = Math.max(1, (int) Math.ceil((double) entries.size() / itemsPerPage));
         int safePage = Math.max(0, Math.min(page, totalPages - 1));
         playerPages.put(player.getUniqueId(), safePage);
 
-        Inventory inv = Bukkit.createInventory(null, GUI_SIZE, GUI_TITLE + " §7- 第" + (safePage + 1) + "/" + totalPages + "页");
+        Inventory inv = Bukkit.createInventory(null, GUI_SIZE, GUI_TITLE + " §7- " + (safePage + 1) + "/" + totalPages);
 
         int startIndex = safePage * itemsPerPage;
-        int endIndex = Math.min(startIndex + itemsPerPage, imageList.size());
-        int slot = 0;
+        int endIndex = Math.min(startIndex + itemsPerPage, entries.size());
 
-        for (int i = startIndex; i < endIndex; i++) {
-            File img = imageList.get(i);
+        for (int i = startIndex, slot = 0; i < endIndex; i++, slot++) {
+            ImageEntry entry = entries.get(i);
             ItemStack item = new ItemStack(Material.ITEM_FRAME);
             ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName("§e" + img.getName());
+            meta.setDisplayName("§e" + entry.file.getName());
             List<String> lore = new ArrayList<>();
             lore.add("§7点击使用此图片创建地图画");
-            lore.add("§7大小: " + formatFileSize(img.length()));
-            lore.add("§8" + img.getPath());
+            lore.add("§7大小: " + formatFileSize(entry.file.length()));
+            lore.add(RELATIVE_PREFIX + entry.relativePath);
             meta.setLore(lore);
             item.setItemMeta(meta);
-            inv.setItem(slot++, item);
+            inv.setItem(slot, item);
         }
 
         if (safePage > 0) {
-            inv.setItem(45, buildSimpleItem(Material.BOOKSHELF, "§a首页"));
-            inv.setItem(48, buildSimpleItem(Material.ARROW, "§a上一页"));
+            inv.setItem(45, buildItem(Material.BOOKSHELF, "§a⏮ 首页"));
+            inv.setItem(48, buildItem(Material.ARROW, "§a◀ 上一页"));
         }
-
         if (safePage < totalPages - 1) {
-            inv.setItem(50, buildSimpleItem(Material.ARROW, "§a下一页"));
-            inv.setItem(53, buildSimpleItem(Material.BOOK, "§a末页"));
+            inv.setItem(50, buildItem(Material.ARROW, "§a下一页 ▶"));
+            inv.setItem(53, buildItem(Material.BOOK, "§a末页 ⏭"));
         }
 
-        ItemStack uploadBtn = new ItemStack(Material.LIME_WOOL);
-        ItemMeta uploadMeta = uploadBtn.getItemMeta();
-        uploadMeta.setDisplayName("§a§l📤 上传图片");
-        List<String> uploadLore = new ArrayList<>();
-        uploadLore.add("§7点击获取上传链接");
-        uploadLore.add("§7通过网页上传新图片");
-        uploadMeta.setLore(uploadLore);
-        uploadBtn.setItemMeta(uploadMeta);
-        inv.setItem(49, uploadBtn);
-
-        ItemStack pageInfo = new ItemStack(Material.PAPER);
-        ItemMeta pageInfoMeta = pageInfo.getItemMeta();
-        pageInfoMeta.setDisplayName("§e📄 当前页 " + (safePage + 1) + "/" + totalPages);
-        List<String> pageInfoLore = new ArrayList<>();
-        pageInfoLore.add("§7共 " + imageList.size() + " 张图片");
-        pageInfoLore.add("§7每页显示 " + itemsPerPage + " 张");
-        pageInfoMeta.setLore(pageInfoLore);
-        pageInfo.setItemMeta(pageInfoMeta);
-        inv.setItem(52, pageInfo);
+        inv.setItem(49, buildItem(Material.LIME_WOOL, "§a§l📤 上传图片", "§7点击获取上传链接", "§7通过网页上传新图片"));
+        inv.setItem(52, buildItem(Material.PAPER, "§e📄 " + (safePage + 1) + "/" + totalPages,
+                "§7共 " + entries.size() + " 张图片", "§7每页 " + itemsPerPage + " 张"));
 
         player.openInventory(inv);
     }
 
-    private List<File> listPlayerImages(Player player) {
-        File imageDir = plugin.getPluginConfig().getPlayerImageDirectory(player.getUniqueId());
-        List<File> result = new ArrayList<>();
-        collectImageFiles(imageDir, result);
-        result.sort(Comparator.comparingLong(File::lastModified).reversed());
-        return result;
-    }
-
-    private void collectImageFiles(File dir, List<File> out) {
+    private void collectImageFiles(File root, File dir, List<ImageEntry> out) {
         if (dir == null || !dir.exists()) return;
         File[] files = dir.listFiles();
         if (files == null) return;
         for (File file : files) {
             if (file.isDirectory()) {
-                collectImageFiles(file, out);
+                collectImageFiles(root, file, out);
                 continue;
             }
             String lower = file.getName().toLowerCase();
             if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
                 lower.endsWith(".gif") || lower.endsWith(".bmp") || lower.endsWith(".webp")) {
-                out.add(file);
+                String relative = root.toPath().relativize(file.toPath()).toString().replace("\\", "/");
+                out.add(new ImageEntry(file, relative));
             }
         }
-    }
-
-    private ItemStack buildSimpleItem(Material material, String name) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(name);
-        item.setItemMeta(meta);
-        return item;
     }
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         if (!event.getView().getTitle().startsWith(GUI_TITLE)) return;
         if (!(event.getWhoClicked() instanceof Player player)) return;
-
         event.setCancelled(true);
 
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
+        ItemMeta meta = clicked.getItemMeta();
+        if (meta == null) return;
 
         int slot = event.getRawSlot();
         int page = playerPages.getOrDefault(player.getUniqueId(), 0);
 
-        if (slot == 48 && clicked.getType() == Material.ARROW) {
-            playerPages.put(player.getUniqueId(), page - 1);
-            openPage(player, page - 1);
-            return;
-        }
-
-        if (slot == 50 && clicked.getType() == Material.ARROW) {
-            playerPages.put(player.getUniqueId(), page + 1);
-            openPage(player, page + 1);
-            return;
-        }
-
         if (slot == 45 && clicked.getType() == Material.BOOKSHELF) {
-            playerPages.put(player.getUniqueId(), 0);
             openPage(player, 0);
             return;
         }
-
+        if (slot == 48 && clicked.getType() == Material.ARROW) {
+            openPage(player, page - 1);
+            return;
+        }
+        if (slot == 50 && clicked.getType() == Material.ARROW) {
+            openPage(player, page + 1);
+            return;
+        }
         if (slot == 53 && clicked.getType() == Material.BOOK) {
-            playerPages.put(player.getUniqueId(), Integer.MAX_VALUE);
             openPage(player, Integer.MAX_VALUE);
             return;
         }
-
         if (slot == 49 && clicked.getType() == Material.LIME_WOOL) {
             player.closeInventory();
-            Bukkit.getScheduler().runTask(plugin, () ->
-                    player.performCommand("mapart upload"));
+            Bukkit.getScheduler().runTask(plugin, () -> player.performCommand("mapart upload"));
             return;
         }
 
-        if (slot >= 0 && slot < 45) {
-            ItemMeta meta = clicked.getItemMeta();
-            if (meta == null || !meta.hasDisplayName()) return;
-            String name = meta.getDisplayName();
-            if (name.startsWith("§e")) {
-                String fileName = name.substring(2);
-                if (meta.hasLore()) {
-                    for (String line : meta.getLore()) {
-                        if (line.startsWith("§8")) {
-                            File file = new File(line.substring(2));
-                            try {
-                                File root = plugin.getPluginConfig().getImageDirectory();
-                                fileName = root.toPath().relativize(file.toPath()).toString().replace("\\", "/");
-                            } catch (Exception ignored) {
-                            }
-                            break;
-                        }
+        if (slot >= 0 && slot < 45 && meta.getDisplayName().startsWith("§e")) {
+            String relativePath = null;
+            if (meta.hasLore()) {
+                for (String line : meta.getLore()) {
+                    if (line.startsWith(RELATIVE_PREFIX)) {
+                        relativePath = line.substring(RELATIVE_PREFIX.length());
+                        break;
                     }
                 }
-                player.closeInventory();
-                String finalFileName = fileName;
-                Bukkit.getScheduler().runTask(plugin, () ->
-                        player.performCommand("mapart apply " + finalFileName));
             }
+            if (relativePath == null) {
+                relativePath = player.getUniqueId() + "/" + meta.getDisplayName().substring(2);
+            }
+
+            player.closeInventory();
+            String finalPath = relativePath;
+            player.sendMessage("§a正在创建地图画: " + finalPath);
+
+            plugin.getManager().createMapArt(player, finalPath, MapArtRenderer.Mode.SCALE).thenAccept(result -> {
+                if (result.success()) {
+                    player.sendMessage("§a" + result.message());
+                } else {
+                    player.sendMessage("§c" + result.message());
+                }
+            });
         }
     }
 
@@ -203,14 +170,22 @@ public class MapArtGUI implements Listener {
         }
     }
 
-    private String formatFileSize(long bytes) {
-        String[] units = {"B", "KB", "MB"};
-        int i = 0;
-        double size = bytes;
-        while (size >= 1024 && i < 2) {
-            size /= 1024;
-            i++;
+    private ItemStack buildItem(Material material, String name, String... loreLines) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        if (loreLines.length > 0) {
+            meta.setLore(Arrays.asList(loreLines));
         }
-        return String.format("%.1f %s", size, units[i]);
+        item.setItemMeta(meta);
+        return item;
     }
+
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
+        return String.format("%.1f MB", bytes / (1024.0 * 1024));
+    }
+
+    private record ImageEntry(File file, String relativePath) {}
 }
