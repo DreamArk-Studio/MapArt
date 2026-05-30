@@ -182,8 +182,8 @@ public class WebUploadServer {
             }
         }
 
-        String safeName = tokenInfo.playerName + "_" + System.currentTimeMillis() + "." + ext;
-        File dest = new File(plugin.getPluginConfig().getImageDirectory(), safeName);
+        String safeName = System.currentTimeMillis() + "." + ext;
+        File dest = new File(plugin.getPluginConfig().getPlayerImageDirectory(tokenInfo.playerUuid), safeName);
         Files.write(dest.toPath(), filePart.data);
 
         plugin.getLogger().info("Image uploaded by " + tokenInfo.playerName + ": " + safeName);

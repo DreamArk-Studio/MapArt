@@ -1,8 +1,10 @@
 package com.mapart.config;
 
 import com.mapart.MapArtPlugin;
+import org.bukkit.entity.Player;
 
 import java.io.File;
+import java.util.UUID;
 
 public class PluginConfig {
 
@@ -32,7 +34,7 @@ public class PluginConfig {
         plugin.getConfig().addDefault("web-server.enabled", true);
         plugin.getConfig().addDefault("web-server.host", "0.0.0.0");
         plugin.getConfig().addDefault("web-server.port", 8080);
-        plugin.getConfig().addDefault("web-server.public-url", "https://map.yourserver.com");
+        plugin.getConfig().addDefault("web-server.public-url", "http://127.0.0.1:8080");
         
         plugin.getConfig().options().copyDefaults(true);
         plugin.saveConfig();
@@ -76,6 +78,29 @@ public class PluginConfig {
 
     public File getImageDirectory() {
         return imageDirectory;
+    }
+
+    public File getPlayerImageDirectory(UUID playerUuid) {
+        File dir = new File(imageDirectory, playerUuid.toString());
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        return dir;
+    }
+
+    public File getPlayerImageDirectory(Player player) {
+        return getPlayerImageDirectory(player.getUniqueId());
+    }
+
+    public File getImageFile(String imageName) {
+        File file = new File(imageDirectory, imageName);
+        try {
+            if (file.getCanonicalPath().startsWith(imageDirectory.getCanonicalPath())) {
+                return file;
+            }
+        } catch (Exception ignored) {
+        }
+        return new File(imageDirectory, imageName);
     }
 
     public boolean isWebServerEnabled() {

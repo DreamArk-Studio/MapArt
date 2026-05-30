@@ -21,4 +21,5 @@ web-server:
   host: "0.0.0.0"
   port: 8080
   # 上传页面地址（用于给玩家显示的链接）
-  public-url: "https://map.yourserver.com"
+  # 默认示例使用 HTTP，便于本机/内网调试；正式域名可改成 https://yourdomain
+  public-url: "http://127.0.0.1:8080"

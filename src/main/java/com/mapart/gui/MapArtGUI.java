@@ -35,7 +35,7 @@ public class MapArtGUI implements Listener {
     private void openPage(Player player, int page) {
         Inventory inv = Bukkit.createInventory(null, GUI_SIZE, GUI_TITLE + " §7- 第" + (page + 1) + "页");
 
-        File[] images = plugin.getPluginConfig().getImageDirectory().listFiles((dir, name) -> {
+        File[] images = plugin.getPluginConfig().getPlayerImageDirectory(player.getUniqueId()).listFiles((dir, name) -> {
             String lower = name.toLowerCase();
             return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
                     || lower.endsWith(".gif") || lower.endsWith(".bmp") || lower.endsWith(".webp");

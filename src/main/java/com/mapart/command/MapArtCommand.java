@@ -11,7 +11,10 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import org.bukkit.Bukkit;
+
 import java.io.File;
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -59,8 +62,20 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
     private void handleUpload(Player player) {
         String token = plugin.getTokenManager().createToken(player.getUniqueId(), player.getName());
         String uploadUrl = plugin.getPluginConfig().getWebPublicUrl() + "/upload?token=" + token;
-        player.sendMessage("§a点击链接上传图片（有效期为5分钟）：");
-        player.sendMessage("§6§n" + uploadUrl);
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(uploadUrl).openConnection();
+                conn.setConnectTimeout(500);
+                conn.setReadTimeout(500);
+                conn.disconnect();
+            } catch (Exception e) {
+                player.sendMessage("§c⚠ 无法连接到上传服务器，请检查端口和防火墙是否放行 8080");
+            }
+        });
+        player.sendMessage("§a点击链接上传图片（有效期5分钟）：");
+        player.spigot().sendMessage(
+                net.md_5.bungee.api.chat.TextComponent.fromLegacy(
+                        "§6[点击打开上传页面](" + uploadUrl + ")"));
         player.sendMessage("§7提示：上传成功后使用 §e/mapart gui §7查看并使用图片");
     }
 
@@ -86,6 +101,20 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
         }
 
         String imageName = args[1];
+        File playerDir = plugin.getPluginConfig().getPlayerImageDirectory(player);
+        File playerFile = new File(playerDir, imageName);
+        File globalFile = plugin.getPluginConfig().getImageFile(imageName);
+
+        if (playerFile.exists()) {
+            imageName = player.getUniqueId() + "/" + imageName;
+        } else if (globalFile.exists()) {
+            // 使用全局文件
+        } else {
+            player.sendMessage("§c图片文件不存在: " + imageName);
+            player.sendMessage("§7请先通过 §e/mapart upload §7上传图片");
+            return;
+        }
+
         player.sendMessage("§a正在处理图片: " + imageName);
 
         manager.createMapArt(player, imageName, mode).thenAccept(result -> {
@@ -107,9 +136,9 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
     }
 
     private void handleList(Player player) {
-        File imageDir = plugin.getPluginConfig().getImageDirectory();
+        File imageDir = plugin.getPluginConfig().getPlayerImageDirectory(player);
         if (!imageDir.exists() || imageDir.listFiles() == null) {
-            player.sendMessage("§c图片目录为空！");
+            player.sendMessage("§c你的图片目录为空，请先通过 §e/mapart upload §7上传图片！");
             return;
         }
 
@@ -145,7 +174,7 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
     @Nullable
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             return null;
         }
 
@@ -155,7 +184,7 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("apply")) {
-            File imageDir = plugin.getPluginConfig().getImageDirectory();
+            File imageDir = plugin.getPluginConfig().getPlayerImageDirectory(player.getUniqueId());
             if (imageDir.exists() && imageDir.listFiles() != null) {
                 return Arrays.stream(imageDir.listFiles())
                         .filter(File::isFile)

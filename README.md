@@ -12,18 +12,22 @@
 
 ## 安装方法
 
-1. 将 `MapArt-1.0.0.jar` 放入服务器的 `plugins` 目录
+1. 将 `MapArt-1.1.2.jar` 放入服务器的 `plugins` 目录
 2. 重启服务器
-3. 将图片放入 `plugins/MapArt/images/` 目录
+3. 玩家通过 `/mapart upload` 上传图片（默认保存到 `plugins/MapArt/images/<玩家UUID>/`）
+4. 或手动将图片放入 `plugins/MapArt/images/` 目录
 
 ## 使用方法
 
 | 命令 | 说明 |
 |------|------|
+| `/mapart` | 打开 GUI（展示当前玩家图片） |
+| `/mapart gui` | 打开 GUI |
+| `/mapart upload` | 获取网页上传链接（按玩家隔离） |
 | `/mapart apply <图片文件名> [scale|tile]` | 将图片转换为地图画（scale: 缩放, tile: 切分） |
 | `/mapart clear` | 清除所有地图画 |
 | `/mapart info` | 查看持有的地图数量 |
-| `/mapart list` | 列出可用的图片文件 |
+| `/mapart list` | 列出当前玩家可用的图片文件 |
 
 **示例:**
 ```
@@ -75,6 +79,16 @@
 `plugins/MapArt/config.yml`:
 
 ```yaml
+# MapArt 配置文件
+
+web-server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8080
+  # 上传页面地址（用于给玩家显示的链接）
+  # 默认示例使用 HTTP，便于本机/内网调试；正式域名可改成 https://yourdomain
+  public-url: "http://127.0.0.1:8080"
+
 # 最大图片宽度（像素）
 max-image-width: 2048
 
@@ -91,6 +105,10 @@ async-processing: true
 max-concurrent-tasks: 4
 ```
 
+### 图片隔离存储
+- 上传后文件保存位置：`plugins/MapArt/images/<玩家UUID>/`
+- 每个玩家只能看到和使用自己上传的图片
+
 ## 权限
 
 | 权限节点 | 说明 | 默认 |
@@ -104,7 +122,7 @@ max-concurrent-tasks: 4
 mvn clean package
 ```
 
-构建产物位于 `target/MapArt-1.0.0.jar`
+构建产物位于 `target/MapArt-1.1.2.jar`
 
 ## 依赖
 

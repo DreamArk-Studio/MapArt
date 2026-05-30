@@ -52,7 +52,7 @@ public class MapArtManager {
     public CompletableFuture<MapArtResult> createMapArt(Player player, String imageName, MapArtRenderer.Mode mode) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                File imageFile = new File(plugin.getPluginConfig().getImageDirectory(), imageName);
+                File imageFile = plugin.getPluginConfig().getImageFile(imageName);
                 if (!imageFile.exists()) {
                     return new MapArtResult(false, "图片文件不存在: " + imageName);
                 }
@@ -94,7 +94,7 @@ public class MapArtManager {
                         meta.setMapView(mapView);
                         mapItem.setItemMeta(meta);
                         
-                        addToRightHotbar(player, mapItem);
+                        player.getInventory().addItem(mapItem);
                     }
                 });
 
@@ -144,17 +144,6 @@ public class MapArtManager {
      */
     public MapDataStore getDataStore() {
         return dataStore;
-    }
-
-    private void addToRightHotbar(Player player, ItemStack item) {
-        for (int slot = 8; slot >= 0; slot--) {
-            ItemStack existing = player.getInventory().getItem(slot);
-            if (existing == null || existing.getType().isAir()) {
-                player.getInventory().setItem(slot, item);
-                return;
-            }
-        }
-        player.getInventory().addItem(item);
     }
 
     /**

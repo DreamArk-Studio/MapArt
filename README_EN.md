@@ -12,18 +12,22 @@ A map art plugin for Purpur/Paper servers that allows players to convert custom 
 
 ## Installation
 
-1. Place `MapArt-1.0.0.jar` into your server's `plugins` directory
+1. Place `MapArt-1.1.2.jar` into your server's `plugins` directory
 2. Restart the server
-3. Place images into `plugins/MapArt/images/` directory
+3. Players use `/mapart upload` to upload images (saved to `plugins/MapArt/images/<playerUUID>/`)
+4. Or manually place images into `plugins/MapArt/images/` directory
 
 ## Usage
 
 | Command | Description |
 |---------|-------------|
+| `/mapart` | Open GUI (shows current player images) |
+| `/mapart gui` | Open GUI |
+| `/mapart upload` | Get a web upload link (player-specific) |
 | `/mapart apply <image file> [scale|tile]` | Convert image to map art (scale: fit single map, tile: split into grid) |
 | `/mapart clear` | Clear all map art |
 | `/mapart info` | View number of maps you hold |
-| `/mapart list` | List available image files |
+| `/mapart list` | List current player's available image files |
 
 **Example:**
 ```
@@ -75,6 +79,16 @@ A map art plugin for Purpur/Paper servers that allows players to convert custom 
 `plugins/MapArt/config.yml`:
 
 ```yaml
+# MapArt configuration
+
+web-server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8080
+  # Public upload page URL shown to players
+  # Default is HTTP for local/LAN testing; production can use https://yourdomain
+  public-url: "http://127.0.0.1:8080"
+
 # Maximum image width (pixels)
 max-image-width: 2048
 
@@ -91,6 +105,10 @@ async-processing: true
 max-concurrent-tasks: 4
 ```
 
+### Player image isolation
+- Uploaded files are saved under: `plugins/MapArt/images/<playerUUID>/`
+- Each player can only see and use their own uploaded images
+
 ## Permissions
 
 | Permission | Description | Default |
@@ -104,7 +122,7 @@ max-concurrent-tasks: 4
 mvn clean package
 ```
 
-Build output is located at `target/MapArt-1.0.0.jar`
+Build output is located at `target/MapArt-1.1.2.jar`
 
 ## Dependencies
 

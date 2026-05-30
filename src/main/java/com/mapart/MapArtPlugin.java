@@ -48,6 +48,13 @@ public final class MapArtPlugin extends JavaPlugin {
             getLogger().warning("Failed to start web upload server: " + e.getMessage());
         }
 
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+            try {
+                tokenManager.cleanup();
+            } catch (Exception ignored) {
+            }
+        }, 20L * 30, 20L * 60);
+
         telemetryManager = new TelemetryManager(this);
         telemetryManager.init();
 
