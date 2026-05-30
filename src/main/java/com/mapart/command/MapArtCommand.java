@@ -77,7 +77,7 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
         clickMsg.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.OPEN_URL, uploadUrl));
         clickMsg.setHoverEvent(new net.md_5.bungee.api.chat.HoverEvent(
                 net.md_5.bungee.api.chat.HoverEvent.Action.SHOW_TEXT,
-                new net.md_5.bungee.api.chat.TextComponent("点击打开上传链接\n" + uploadUrl)
+                new net.md_5.bungee.api.chat.hover.content.Text("点击打开上传链接\n" + uploadUrl)
         ));
         player.spigot().sendMessage(clickMsg);
         player.sendMessage("§7如果链接不可点击，请复制下方网址到浏览器打开：");
