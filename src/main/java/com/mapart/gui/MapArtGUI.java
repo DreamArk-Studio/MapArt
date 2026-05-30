@@ -33,19 +33,15 @@ public class MapArtGUI implements Listener {
     }
 
     private void openPage(Player player, int page) {
-        Inventory inv = Bukkit.createInventory(null, GUI_SIZE, GUI_TITLE + " §7- 第" + (page + 1) + "页");
-
-        File[] images = plugin.getPluginConfig().getPlayerImageDirectory(player.getUniqueId()).listFiles((dir, name) -> {
-            String lower = name.toLowerCase();
-            return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
-                    || lower.endsWith(".gif") || lower.endsWith(".bmp") || lower.endsWith(".webp");
-        });
-
-        List<File> imageList = images != null ? Arrays.asList(images) : Collections.emptyList();
-        imageList.sort(Comparator.comparingLong(File::lastModified).reversed());
-
+        List<File> imageList = listPlayerImages(player);
         int itemsPerPage = 28;
-        int startIndex = page * itemsPerPage;
+        int totalPages = Math.max(1, (int) Math.ceil((double) imageList.size() / itemsPerPage));
+        int safePage = Math.max(0, Math.min(page, totalPages - 1));
+        playerPages.put(player.getUniqueId(), safePage);
+
+        Inventory inv = Bukkit.createInventory(null, GUI_SIZE, GUI_TITLE + " §7- 第" + (safePage + 1) + "/" + totalPages + "页");
+
+        int startIndex = safePage * itemsPerPage;
         int endIndex = Math.min(startIndex + itemsPerPage, imageList.size());
         int slot = 0;
 
@@ -57,25 +53,20 @@ public class MapArtGUI implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add("§7点击使用此图片创建地图画");
             lore.add("§7大小: " + formatFileSize(img.length()));
+            lore.add("§8" + img.getPath());
             meta.setLore(lore);
             item.setItemMeta(meta);
             inv.setItem(slot++, item);
         }
 
-        if (page > 0) {
-            ItemStack prev = new ItemStack(Material.ARROW);
-            ItemMeta prevMeta = prev.getItemMeta();
-            prevMeta.setDisplayName("§a上一页");
-            prev.setItemMeta(prevMeta);
-            inv.setItem(48, prev);
+        if (safePage > 0) {
+            inv.setItem(45, buildSimpleItem(Material.BOOKSHELF, "§a首页"));
+            inv.setItem(48, buildSimpleItem(Material.ARROW, "§a上一页"));
         }
 
-        if (endIndex < imageList.size()) {
-            ItemStack next = new ItemStack(Material.ARROW);
-            ItemMeta nextMeta = next.getItemMeta();
-            nextMeta.setDisplayName("§a下一页");
-            next.setItemMeta(nextMeta);
-            inv.setItem(50, next);
+        if (safePage < totalPages - 1) {
+            inv.setItem(50, buildSimpleItem(Material.ARROW, "§a下一页"));
+            inv.setItem(53, buildSimpleItem(Material.BOOK, "§a末页"));
         }
 
         ItemStack uploadBtn = new ItemStack(Material.LIME_WOOL);
@@ -88,17 +79,50 @@ public class MapArtGUI implements Listener {
         uploadBtn.setItemMeta(uploadMeta);
         inv.setItem(49, uploadBtn);
 
-        ItemStack infoBtn = new ItemStack(Material.PAPER);
-        ItemMeta infoMeta = infoBtn.getItemMeta();
-        infoMeta.setDisplayName("§e📋 使用帮助");
-        List<String> infoLore = new ArrayList<>();
-        infoLore.add("§7选择图片后自动创建地图画");
-        infoLore.add("§7地图会直接放入你的背包");
-        infoMeta.setLore(infoLore);
-        infoBtn.setItemMeta(infoMeta);
-        inv.setItem(53, infoBtn);
+        ItemStack pageInfo = new ItemStack(Material.PAPER);
+        ItemMeta pageInfoMeta = pageInfo.getItemMeta();
+        pageInfoMeta.setDisplayName("§e📄 当前页 " + (safePage + 1) + "/" + totalPages);
+        List<String> pageInfoLore = new ArrayList<>();
+        pageInfoLore.add("§7共 " + imageList.size() + " 张图片");
+        pageInfoLore.add("§7每页显示 " + itemsPerPage + " 张");
+        pageInfoMeta.setLore(pageInfoLore);
+        pageInfo.setItemMeta(pageInfoMeta);
+        inv.setItem(52, pageInfo);
 
         player.openInventory(inv);
+    }
+
+    private List<File> listPlayerImages(Player player) {
+        File imageDir = plugin.getPluginConfig().getPlayerImageDirectory(player.getUniqueId());
+        List<File> result = new ArrayList<>();
+        collectImageFiles(imageDir, result);
+        result.sort(Comparator.comparingLong(File::lastModified).reversed());
+        return result;
+    }
+
+    private void collectImageFiles(File dir, List<File> out) {
+        if (dir == null || !dir.exists()) return;
+        File[] files = dir.listFiles();
+        if (files == null) return;
+        for (File file : files) {
+            if (file.isDirectory()) {
+                collectImageFiles(file, out);
+                continue;
+            }
+            String lower = file.getName().toLowerCase();
+            if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
+                lower.endsWith(".gif") || lower.endsWith(".bmp") || lower.endsWith(".webp")) {
+                out.add(file);
+            }
+        }
+    }
+
+    private ItemStack buildSimpleItem(Material material, String name) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        item.setItemMeta(meta);
+        return item;
     }
 
     @EventHandler
@@ -126,6 +150,18 @@ public class MapArtGUI implements Listener {
             return;
         }
 
+        if (slot == 45 && clicked.getType() == Material.BOOKSHELF) {
+            playerPages.put(player.getUniqueId(), 0);
+            openPage(player, 0);
+            return;
+        }
+
+        if (slot == 53 && clicked.getType() == Material.BOOK) {
+            playerPages.put(player.getUniqueId(), Integer.MAX_VALUE);
+            openPage(player, Integer.MAX_VALUE);
+            return;
+        }
+
         if (slot == 49 && clicked.getType() == Material.LIME_WOOL) {
             player.closeInventory();
             Bukkit.getScheduler().runTask(plugin, () ->
@@ -139,6 +175,19 @@ public class MapArtGUI implements Listener {
             String name = meta.getDisplayName();
             if (name.startsWith("§e")) {
                 String fileName = name.substring(2);
+                if (meta.hasLore()) {
+                    for (String line : meta.getLore()) {
+                        if (line.startsWith("§8")) {
+                            File file = new File(line.substring(2));
+                            try {
+                                File root = plugin.getPluginConfig().getImageDirectory();
+                                fileName = root.toPath().relativize(file.toPath()).toString().replace("\\", "/");
+                            } catch (Exception ignored) {
+                            }
+                            break;
+                        }
+                    }
+                }
                 player.closeInventory();
                 String finalFileName = fileName;
                 Bukkit.getScheduler().runTask(plugin, () ->

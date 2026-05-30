@@ -48,7 +48,7 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
             case "apply" -> handleApply(player, args);
             case "clear" -> handleClear(player);
             case "info" -> handleInfo(player);
-            case "list" -> handleList(player);
+            case "list" -> handleList(player, args.length > 1 ? args[1] : "mine");
             default -> sendHelp(player);
         }
 
@@ -106,24 +106,17 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
             }
         }
 
-        String imageName = args[1];
-        File playerDir = plugin.getPluginConfig().getPlayerImageDirectory(player);
-        File playerFile = new File(playerDir, imageName);
-        File globalFile = plugin.getPluginConfig().getImageFile(imageName);
-
-        if (playerFile.exists()) {
-            imageName = player.getUniqueId() + "/" + imageName;
-        } else if (globalFile.exists()) {
-            // 使用全局文件
-        } else {
-            player.sendMessage("§c图片文件不存在: " + imageName);
+        String input = args[1];
+        String resolved = resolveImageName(player, input);
+        if (resolved == null) {
+            player.sendMessage("§c图片文件不存在: " + input);
             player.sendMessage("§7请先通过 §e/mapart upload §7上传图片");
             return;
         }
 
-        player.sendMessage("§a正在处理图片: " + imageName);
+        player.sendMessage("§a正在处理图片: " + resolved);
 
-        manager.createMapArt(player, imageName, mode).thenAccept(result -> {
+        manager.createMapArt(player, resolved, mode).thenAccept(result -> {
             if (result.success()) {
                 player.sendMessage("§a" + result.message());
             } else {
@@ -142,28 +135,93 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
     }
 
     private void handleList(Player player) {
-        File imageDir = plugin.getPluginConfig().getPlayerImageDirectory(player);
-        if (!imageDir.exists() || imageDir.listFiles() == null) {
-            player.sendMessage("§c你的图片目录为空，请先通过 §e/mapart upload §7上传图片！");
-            return;
+        handleList(player, "mine");
+    }
+
+    private void handleList(Player player, String scope) {
+        File playerDir = plugin.getPluginConfig().getPlayerImageDirectory(player);
+        File globalDir = plugin.getPluginConfig().getImageDirectory();
+        boolean showMine = scope.equalsIgnoreCase("mine") || scope.equalsIgnoreCase("all");
+        boolean showGlobal = scope.equalsIgnoreCase("global") || scope.equalsIgnoreCase("all");
+
+        List<String> names = new ArrayList<>();
+        if (showMine) {
+            addImageFiles(playerDir, playerDir, names);
+        }
+        if (showGlobal) {
+            addImageFiles(globalDir, globalDir, names);
         }
 
-        File[] images = imageDir.listFiles((dir, name) -> {
-            String lower = name.toLowerCase();
-            return lower.endsWith(".png") || lower.endsWith(".jpg") || 
-                   lower.endsWith(".jpeg") || lower.endsWith(".gif") || 
-                   lower.endsWith(".bmp") || lower.endsWith(".webp");
-        });
-
-        if (images == null || images.length == 0) {
+        if (names.isEmpty()) {
             player.sendMessage("§c没有找到可用的图片！");
+            player.sendMessage("§7请先通过 §e/mapart upload §7上传图片");
             return;
         }
 
         player.sendMessage("§a可用的图片文件:");
-        for (File image : images) {
-            player.sendMessage("§7- " + image.getName());
+        for (String name : names) {
+            player.sendMessage("§7- " + name);
         }
+    }
+
+    private void addImageFiles(File root, File dir, List<String> out) {
+        if (dir == null || !dir.exists()) return;
+        File[] files = dir.listFiles();
+        if (files == null) return;
+
+        for (File file : files) {
+            if (file.isDirectory()) {
+                addImageFiles(root, file, out);
+                continue;
+            }
+            String lower = file.getName().toLowerCase();
+            if (!(lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
+                  lower.endsWith(".gif") || lower.endsWith(".bmp") || lower.endsWith(".webp"))) {
+                continue;
+            }
+            try {
+                String relative = root.toPath().relativize(file.toPath()).toString();
+                out.add(relative.replace("\\", "/"));
+            } catch (Exception ignored) {
+                out.add(file.getName());
+            }
+        }
+    }
+
+    private String resolveImageName(Player player, String input) {
+        if (input == null || input.isBlank()) return null;
+        String normalized = input.replace("\\", "/");
+
+        if (normalized.contains("/")) {
+            File direct = plugin.getPluginConfig().getImageFile(normalized);
+            if (direct.exists()) {
+                return normalized;
+            }
+            return null;
+        }
+
+        File playerFile = new File(plugin.getPluginConfig().getPlayerImageDirectory(player), normalized);
+        if (playerFile.exists()) {
+            return player.getUniqueId() + "/" + normalized;
+        }
+
+        File imagesRoot = plugin.getPluginConfig().getImageDirectory();
+        File[] dirs = imagesRoot.listFiles(File::isDirectory);
+        if (dirs != null) {
+            for (File dir : dirs) {
+                File candidate = new File(dir, normalized);
+                if (candidate.exists()) {
+                    return dir.getName() + "/" + normalized;
+                }
+            }
+        }
+
+        File globalFile = new File(imagesRoot, normalized);
+        if (globalFile.exists()) {
+            return normalized;
+        }
+
+        return null;
     }
 
     private void sendHelp(Player player) {
@@ -188,6 +246,10 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
             List<String> subCommands = Arrays.asList("gui", "upload", "apply", "clear", "info", "list");
             return subCommands.stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .collect(Collectors.toList());
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("list")) {
+            return Arrays.asList("mine", "all", "global").stream()
+                    .filter(s -> s.startsWith(args[1].toLowerCase()))
                     .collect(Collectors.toList());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("apply")) {
             File imageDir = plugin.getPluginConfig().getPlayerImageDirectory(player.getUniqueId());
