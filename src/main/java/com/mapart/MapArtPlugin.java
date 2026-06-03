@@ -60,7 +60,7 @@ public final class MapArtPlugin extends JavaPlugin {
         telemetryManager.init();
 
         VersionChecker versionChecker = new VersionChecker(this);
-        getServer().getScheduler().runTaskLaterAsynchronously(this, versionChecker::check, 20L * 10);
+        getServer().getScheduler().runTaskLaterAsynchronously(this, versionChecker::check, 20L * 3);
 
         getLogger().info("MapArt has been enabled!");
     }
