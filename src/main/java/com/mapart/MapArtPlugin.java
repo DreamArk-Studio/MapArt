@@ -8,6 +8,7 @@ import com.mapart.manager.MapArtManager;
 import com.mapart.telemetry.TelemetryManager;
 import com.mapart.upload.UploadTokenManager;
 import com.mapart.upload.WebUploadServer;
+import com.mapart.version.VersionChecker;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class MapArtPlugin extends JavaPlugin {
@@ -57,6 +58,9 @@ public final class MapArtPlugin extends JavaPlugin {
 
         telemetryManager = new TelemetryManager(this);
         telemetryManager.init();
+
+        VersionChecker versionChecker = new VersionChecker(this);
+        getServer().getScheduler().runTaskLaterAsynchronously(this, versionChecker::check, 20L * 10);
 
         getLogger().info("MapArt has been enabled!");
     }
