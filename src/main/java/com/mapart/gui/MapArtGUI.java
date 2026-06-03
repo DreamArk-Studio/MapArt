@@ -20,10 +20,10 @@ public class MapArtGUI implements Listener {
 
     private static final String GUI_TITLE = "§6§lMapArt 地图画";
     private static final int GUI_SIZE = 54;
-    private static final String RELATIVE_PREFIX = "§8";
 
     private final MapArtPlugin plugin;
     private final Map<UUID, Integer> playerPages = new HashMap<>();
+    private final Map<UUID, Map<Integer, String>> playerSlotPaths = new HashMap<>();
 
     public MapArtGUI(MapArtPlugin plugin) {
         this.plugin = plugin;
@@ -51,6 +51,8 @@ public class MapArtGUI implements Listener {
         int startIndex = safePage * itemsPerPage;
         int endIndex = Math.min(startIndex + itemsPerPage, entries.size());
 
+        Map<Integer, String> slotMap = new HashMap<>();
+
         for (int i = startIndex, slot = 0; i < endIndex; i++, slot++) {
             ImageEntry entry = entries.get(i);
             ItemStack item = new ItemStack(Material.ITEM_FRAME);
@@ -59,11 +61,13 @@ public class MapArtGUI implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add("§7点击使用此图片创建地图画");
             lore.add("§7大小: " + formatFileSize(entry.file.length()));
-            lore.add(RELATIVE_PREFIX + entry.relativePath);
             meta.setLore(lore);
             item.setItemMeta(meta);
             inv.setItem(slot, item);
+            slotMap.put(slot, entry.relativePath);
         }
+
+        playerSlotPaths.put(player.getUniqueId(), slotMap);
 
         if (safePage > 0) {
             inv.setItem(45, buildItem(Material.BOOKSHELF, "§a⏮ 首页"));
@@ -136,17 +140,11 @@ public class MapArtGUI implements Listener {
         }
 
         if (slot >= 0 && slot < 45 && meta.getDisplayName().startsWith("§e")) {
-            String relativePath = null;
-            if (meta.hasLore()) {
-                for (String line : meta.getLore()) {
-                    if (line.startsWith(RELATIVE_PREFIX)) {
-                        relativePath = line.substring(RELATIVE_PREFIX.length());
-                        break;
-                    }
-                }
-            }
+            Map<Integer, String> slotMap = playerSlotPaths.get(player.getUniqueId());
+            String relativePath = slotMap != null ? slotMap.get(slot) : null;
             if (relativePath == null) {
-                relativePath = player.getUniqueId() + "/" + meta.getDisplayName().substring(2);
+                player.sendMessage("§c无法获取图片路径，请重试");
+                return;
             }
 
             player.closeInventory();
@@ -165,8 +163,10 @@ public class MapArtGUI implements Listener {
 
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
         if (event.getView().getTitle().startsWith(GUI_TITLE)) {
-            playerPages.remove(event.getPlayer().getUniqueId());
+            playerPages.remove(uuid);
+            playerSlotPaths.remove(uuid);
         }
     }
 
