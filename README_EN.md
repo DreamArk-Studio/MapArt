@@ -78,32 +78,70 @@ A map art plugin for Purpur/Paper servers that allows players to convert custom 
 
 `plugins/MapArt/config.yml`:
 
-```yaml
-# MapArt configuration
+### Web Upload Server
 
+Controls the built-in web upload server.
+
+| Config | Type | Default | Description |
+|--------|------|---------|-------------|
+| `web-server.enabled` | boolean | `true` | Enable/disable the web upload server. When off, players must place images manually |
+| `web-server.host` | string | `0.0.0.0` | Listen address. `0.0.0.0` = all interfaces, `127.0.0.1` = local only |
+| `web-server.port` | int | `8080` | Listen port. Ensure firewall allows traffic |
+| `web-server.public-url` | string | `http://127.0.0.1:8080` | URL opened by players. Use `http://127.0.0.1:port` for local testing, server public IP for remote |
+
+> **Note**: `public-url` must use `http://` (not `https://`) unless you have a reverse proxy providing HTTPS.
+
+### Image Limits
+
+| Config | Type | Default | Description |
+|--------|------|---------|-------------|
+| `max-image-width` | int | `2048` | Maximum allowed image width (pixels) |
+| `max-image-height` | int | `2048` | Maximum allowed image height (pixels) |
+
+Images exceeding these limits will be rejected on upload.
+
+### Map Settings
+
+| Config | Type | Default | Description |
+|--------|------|---------|-------------|
+| `map-size` | int | `128` | Pixel size of a single map. Standard Minecraft maps are `128x128` |
+
+### Performance Settings
+
+| Config | Type | Default | Description |
+|--------|------|---------|-------------|
+| `async-processing` | boolean | `true` | Process images asynchronously (recommended) |
+| `max-concurrent-tasks` | int | `4` | Max concurrent processing tasks |
+
+### Full Config Example
+
+```yaml
 web-server:
   enabled: true
   host: 0.0.0.0
   port: 8080
-  # Public upload page URL shown to players
-  # Default is HTTP for local/LAN testing; production can use https://yourdomain
   public-url: "http://127.0.0.1:8080"
 
-# Maximum image width (pixels)
 max-image-width: 2048
-
-# Maximum image height (pixels)
 max-image-height: 2048
-
-# Map size (pixels), standard map is 128x128
 map-size: 128
-
-# Enable async processing
 async-processing: true
-
-# Maximum concurrent tasks
 max-concurrent-tasks: 4
 ```
+
+### Public Server Example
+
+If your server's public IP is `1.2.3.4` and port is `8080`:
+
+```yaml
+web-server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8080
+  public-url: "http://1.2.3.4:8080"
+```
+
+Then set up port forwarding: external `8080` → internal server `8080`.
 
 ### Player image isolation
 - Uploaded files are saved under: `plugins/MapArt/images/<playerUUID>/`
