@@ -1,6 +1,7 @@
 package com.mapart.gui;
 
 import com.mapart.MapArtPlugin;
+import com.mapart.message.MessageManager;
 import com.mapart.renderer.MapArtRenderer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -18,7 +19,6 @@ import java.util.*;
 
 public class MapArtGUI implements Listener {
 
-    private static final String GUI_TITLE = "§6§lMapArt 地图画";
     private static final int GUI_SIZE = 54;
 
     private final MapArtPlugin plugin;
@@ -27,6 +27,14 @@ public class MapArtGUI implements Listener {
 
     public MapArtGUI(MapArtPlugin plugin) {
         this.plugin = plugin;
+    }
+
+    private MessageManager msg() {
+        return plugin.getMessageManager();
+    }
+
+    private String getGuiTitle() {
+        return msg().get("gui.title");
     }
 
     public void open(Player player) {
@@ -46,7 +54,7 @@ public class MapArtGUI implements Listener {
         int safePage = Math.max(0, Math.min(page, totalPages - 1));
         playerPages.put(player.getUniqueId(), safePage);
 
-        Inventory inv = Bukkit.createInventory(null, GUI_SIZE, GUI_TITLE + " §7- " + (safePage + 1) + "/" + totalPages);
+        Inventory inv = Bukkit.createInventory(null, GUI_SIZE, getGuiTitle() + " §7- " + (safePage + 1) + "/" + totalPages);
 
         int startIndex = safePage * itemsPerPage;
         int endIndex = Math.min(startIndex + itemsPerPage, entries.size());
@@ -59,8 +67,8 @@ public class MapArtGUI implements Listener {
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName("§e" + entry.file.getName());
             List<String> lore = new ArrayList<>();
-            lore.add("§7点击使用此图片创建地图画");
-            lore.add("§7大小: " + formatFileSize(entry.file.length()));
+            lore.add(msg().get("gui.click_to_use"));
+            lore.add(msg().get("gui.size") + formatFileSize(entry.file.length()));
             meta.setLore(lore);
             item.setItemMeta(meta);
             inv.setItem(slot, item);
@@ -70,17 +78,18 @@ public class MapArtGUI implements Listener {
         playerSlotPaths.put(player.getUniqueId(), slotMap);
 
         if (safePage > 0) {
-            inv.setItem(45, buildItem(Material.BOOKSHELF, "§a⏮ 首页"));
-            inv.setItem(48, buildItem(Material.ARROW, "§a◀ 上一页"));
+            inv.setItem(45, buildItem(Material.BOOKSHELF, msg().get("gui.first_page")));
+            inv.setItem(48, buildItem(Material.ARROW, msg().get("gui.prev_page")));
         }
         if (safePage < totalPages - 1) {
-            inv.setItem(50, buildItem(Material.ARROW, "§a下一页 ▶"));
-            inv.setItem(53, buildItem(Material.BOOK, "§a末页 ⏭"));
+            inv.setItem(50, buildItem(Material.ARROW, msg().get("gui.next_page")));
+            inv.setItem(53, buildItem(Material.BOOK, msg().get("gui.last_page")));
         }
 
-        inv.setItem(49, buildItem(Material.LIME_WOOL, "§a§l📤 上传图片", "§7点击获取上传链接", "§7通过网页上传新图片"));
-        inv.setItem(52, buildItem(Material.PAPER, "§e📄 " + (safePage + 1) + "/" + totalPages,
-                "§7共 " + entries.size() + " 张图片", "§7每页 " + itemsPerPage + " 张"));
+        inv.setItem(49, buildItem(Material.LIME_WOOL, msg().get("gui.upload_btn"), msg().get("gui.upload_lore1"), msg().get("gui.upload_lore2")));
+        inv.setItem(52, buildItem(Material.PAPER, msg().get("gui.page_info") + (safePage + 1) + "/" + totalPages,
+                msg().get("gui.total_images") + entries.size() + msg().get("gui.total_images_suffix"),
+                msg().get("gui.per_page") + itemsPerPage + msg().get("gui.per_page_suffix")));
 
         player.openInventory(inv);
     }
@@ -105,7 +114,7 @@ public class MapArtGUI implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().startsWith(GUI_TITLE)) return;
+        if (!event.getView().getTitle().startsWith(getGuiTitle())) return;
         if (!(event.getWhoClicked() instanceof Player player)) return;
         event.setCancelled(true);
 
@@ -143,13 +152,13 @@ public class MapArtGUI implements Listener {
             Map<Integer, String> slotMap = playerSlotPaths.get(player.getUniqueId());
             String relativePath = slotMap != null ? slotMap.get(slot) : null;
             if (relativePath == null) {
-                player.sendMessage("§c无法获取图片路径，请重试");
+                player.sendMessage(msg().get("gui.path_error"));
                 return;
             }
 
             player.closeInventory();
             String finalPath = relativePath;
-            player.sendMessage("§a正在创建地图画: " + finalPath);
+            player.sendMessage(msg().get("gui.creating") + finalPath);
 
             plugin.getManager().createMapArt(player, finalPath, MapArtRenderer.Mode.SCALE).thenAccept(result -> {
                 if (result.success()) {
@@ -164,7 +173,7 @@ public class MapArtGUI implements Listener {
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
-        if (event.getView().getTitle().startsWith(GUI_TITLE)) {
+        if (event.getView().getTitle().startsWith(getGuiTitle())) {
             playerPages.remove(uuid);
             playerSlotPaths.remove(uuid);
         }
@@ -187,5 +196,13 @@ public class MapArtGUI implements Listener {
         return String.format("%.1f MB", bytes / (1024.0 * 1024));
     }
 
-    private record ImageEntry(File file, String relativePath) {}
+    private static class ImageEntry {
+        final File file;
+        final String relativePath;
+
+        ImageEntry(File file, String relativePath) {
+            this.file = file;
+            this.relativePath = relativePath;
+        }
+    }
 }

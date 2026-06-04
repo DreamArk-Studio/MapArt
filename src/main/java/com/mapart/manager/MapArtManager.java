@@ -1,6 +1,7 @@
 package com.mapart.manager;
 
 import com.mapart.MapArtPlugin;
+import com.mapart.message.MessageManager;
 import com.mapart.renderer.MapArtMapRenderer;
 import com.mapart.renderer.MapArtRenderer;
 import org.bukkit.Bukkit;
@@ -44,6 +45,10 @@ public class MapArtManager {
         this.dataStore.loadAll();
     }
 
+    private MessageManager msg() {
+        return plugin.getMessageManager();
+    }
+
     /**
      * 从文件加载图片并创建地图画
      * 
@@ -59,17 +64,17 @@ public class MapArtManager {
                     image = ImageIO.read(imageFile);
                 } catch (Exception e) {
                     plugin.getLogger().warning("Failed to read image: " + imageName + " -> " + imageFile.getAbsolutePath() + " : " + e.getMessage());
-                    return new MapArtResult(false, "无法读取图片文件: " + imageName);
+                    return new MapArtResult(false, msg().get("mgr.read_error") + imageName);
                 }
                 if (image == null) {
                     plugin.getLogger().warning("Image returned null: " + imageName + " -> " + imageFile.getAbsolutePath());
-                    return new MapArtResult(false, "无法读取图片文件，格式可能不支持: " + imageName);
+                    return new MapArtResult(false, msg().get("mgr.read_unsupported") + imageName);
                 }
 
                 if (image.getWidth() > plugin.getPluginConfig().getMaxImageWidth() ||
                     image.getHeight() > plugin.getPluginConfig().getMaxImageHeight()) {
                     return new MapArtResult(false, 
-                        String.format("图片尺寸过大！最大允许: %dx%d", 
+                        String.format(msg().get("mgr.size_too_large"), 
                             plugin.getPluginConfig().getMaxImageWidth(),
                             plugin.getPluginConfig().getMaxImageHeight()));
                 }
@@ -102,12 +107,12 @@ public class MapArtManager {
                     }
                 });
 
-                String modeName = mode == MapArtRenderer.Mode.TILE ? "切分" : "缩放";
+                String modeName = mode == MapArtRenderer.Mode.TILE ? msg().get("mgr.mode_tile") : msg().get("mgr.mode_scale");
                 return new MapArtResult(true, 
-                    String.format("成功创建地图画（%s模式）！共 %d 张地图", modeName, mapCount));
+                    String.format(msg().get("mgr.success"), modeName, mapCount));
                     
             } catch (Exception e) {
-                return new MapArtResult(false, "处理图片时出错: " + e.getMessage());
+                return new MapArtResult(false, msg().get("mgr.error") + e.getMessage());
             }
         }, executorService);
     }
@@ -140,7 +145,7 @@ public class MapArtManager {
                 mapCount++;
             }
         }
-        return String.format("你持有 %d 张地图", mapCount);
+        return String.format(msg().get("mgr.info"), mapCount);
     }
 
     /**

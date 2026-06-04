@@ -2,7 +2,9 @@ package com.mapart.command;
 
 import com.mapart.MapArtPlugin;
 import com.mapart.manager.MapArtManager;
+import com.mapart.message.MessageManager;
 import com.mapart.renderer.MapArtRenderer;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -11,10 +13,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import org.bukkit.Bukkit;
-
 import java.io.File;
-import java.util.UUID;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -30,10 +29,14 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
         this.manager = plugin.getManager();
     }
 
+    private MessageManager msg() {
+        return plugin.getMessageManager();
+    }
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§c该命令只能由玩家执行！");
+            sender.sendMessage(msg().get("cmd.player_only"));
             return true;
         }
 
@@ -69,29 +72,29 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
                 conn.setReadTimeout(500);
                 conn.disconnect();
             } catch (Exception e) {
-                player.sendMessage("§c⚠ 无法连接到上传服务器，请检查端口和防火墙是否放行 8080");
+                player.sendMessage(msg().get("cmd.upload_connect_fail"));
             }
         });
-        player.sendMessage("§a点击链接上传图片（有效期5分钟）：");
-        var clickMsg = new net.md_5.bungee.api.chat.TextComponent("§6§n点击打开上传页面");
+        player.sendMessage(msg().get("cmd.upload_click_link"));
+        var clickMsg = new net.md_5.bungee.api.chat.TextComponent(msg().get("cmd.upload_click_url"));
         clickMsg.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.OPEN_URL, uploadUrl));
         clickMsg.setHoverEvent(new net.md_5.bungee.api.chat.HoverEvent(
                 net.md_5.bungee.api.chat.HoverEvent.Action.SHOW_TEXT,
-                new net.md_5.bungee.api.chat.hover.content.Text("点击打开上传链接\n" + uploadUrl)
+                new net.md_5.bungee.api.chat.hover.content.Text(msg().get("cmd.upload_hover") + uploadUrl)
         ));
         player.spigot().sendMessage(clickMsg);
-        player.sendMessage("§7如果链接不可点击，请复制下方网址到浏览器打开：");
+        player.sendMessage(msg().get("cmd.upload_fallback"));
         player.sendMessage("§f" + uploadUrl);
-        player.sendMessage("§7提示：上传成功后使用 §e/mapart gui §7查看并使用图片");
+        player.sendMessage(msg().get("cmd.upload_hint"));
     }
 
     private void handleApply(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage("§c用法: /mapart apply <图片文件名> [scale|tile]");
-            player.sendMessage("§c  scale  - 缩放到单张地图（默认）");
-            player.sendMessage("§c  tile    - 切分为多张地图");
-            player.sendMessage("§c示例: /mapart apply myimage.png");
-            player.sendMessage("§c示例: /mapart apply myimage.png tile");
+            player.sendMessage(msg().get("cmd.apply_usage_1"));
+            player.sendMessage(msg().get("cmd.apply_usage_2"));
+            player.sendMessage(msg().get("cmd.apply_usage_3"));
+            player.sendMessage(msg().get("cmd.apply_usage_4"));
+            player.sendMessage(msg().get("cmd.apply_usage_5"));
             return;
         }
 
@@ -101,7 +104,7 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
             if (modeArg.equals("tile")) {
                 mode = MapArtRenderer.Mode.TILE;
             } else if (!modeArg.equals("scale")) {
-                player.sendMessage("§c无效模式，可用: scale, tile");
+                player.sendMessage(msg().get("cmd.apply_invalid_mode"));
                 return;
             }
         }
@@ -109,12 +112,12 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
         String input = args[1];
         String resolved = resolveImageName(player, input);
         if (resolved == null) {
-            player.sendMessage("§c图片文件不存在: " + input);
-            player.sendMessage("§7请先通过 §e/mapart upload §7上传图片");
+            player.sendMessage(msg().get("cmd.apply_not_found") + input);
+            player.sendMessage(msg().get("cmd.apply_upload_hint"));
             return;
         }
 
-        player.sendMessage("§a正在处理图片: " + resolved);
+        player.sendMessage(msg().get("cmd.apply_processing") + resolved);
 
         manager.createMapArt(player, resolved, mode).thenAccept(result -> {
             if (result.success()) {
@@ -127,7 +130,7 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
 
     private void handleClear(Player player) {
         manager.clearMapArt(player);
-        player.sendMessage("§a已清除所有地图画！");
+        player.sendMessage(msg().get("cmd.clear_done"));
     }
 
     private void handleInfo(Player player) {
@@ -153,12 +156,12 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
         }
 
         if (names.isEmpty()) {
-            player.sendMessage("§c没有找到可用的图片！");
-            player.sendMessage("§7请先通过 §e/mapart upload §7上传图片");
+            player.sendMessage(msg().get("cmd.list_not_found"));
+            player.sendMessage(msg().get("cmd.list_upload_hint"));
             return;
         }
 
-        player.sendMessage("§a可用的图片文件:");
+        player.sendMessage(msg().get("cmd.list_available"));
         for (String name : names) {
             player.sendMessage("§7- " + name);
         }
@@ -234,14 +237,14 @@ public class MapArtCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendHelp(Player player) {
-        player.sendMessage("§6§l=== MapArt 帮助 ===");
-        player.sendMessage("§e/mapart §7- 打开图形界面");
-        player.sendMessage("§e/mapart gui §7- 打开图形界面");
-        player.sendMessage("§e/mapart upload §7- 获取网页上传链接");
-        player.sendMessage("§e/mapart apply <图片> [scale|tile] §7- 将图片转换为地图画");
-        player.sendMessage("§e/mapart clear §7- 清除所有地图画");
-        player.sendMessage("§e/mapart info §7- 查看地图画信息");
-        player.sendMessage("§e/mapart list §7- 列出可用的图片");
+        player.sendMessage(msg().get("cmd.help_title"));
+        player.sendMessage(msg().get("cmd.help_gui"));
+        player.sendMessage(msg().get("cmd.help_gui2"));
+        player.sendMessage(msg().get("cmd.help_upload"));
+        player.sendMessage(msg().get("cmd.help_apply"));
+        player.sendMessage(msg().get("cmd.help_clear"));
+        player.sendMessage(msg().get("cmd.help_info"));
+        player.sendMessage(msg().get("cmd.help_list"));
     }
 
     @Nullable

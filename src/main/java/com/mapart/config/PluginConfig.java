@@ -20,6 +20,7 @@ public class PluginConfig {
     private String webServerHost;
     private int webServerPort;
     private String webPublicUrl;
+    private String language;
 
     public PluginConfig(MapArtPlugin plugin) {
         this.plugin = plugin;
@@ -35,6 +36,7 @@ public class PluginConfig {
         plugin.getConfig().addDefault("web-server.host", "0.0.0.0");
         plugin.getConfig().addDefault("web-server.port", 8080);
         plugin.getConfig().addDefault("web-server.public-url", "http://127.0.0.1:8080");
+        plugin.getConfig().addDefault("language", "zh_cn");
         
         plugin.getConfig().options().copyDefaults(true);
         plugin.saveConfig();
@@ -53,7 +55,8 @@ public class PluginConfig {
         this.webServerEnabled = plugin.getConfig().getBoolean("web-server.enabled", true);
         this.webServerHost = plugin.getConfig().getString("web-server.host", "0.0.0.0");
         this.webServerPort = plugin.getConfig().getInt("web-server.port", 8080);
-        this.webPublicUrl = plugin.getConfig().getString("web-server.public-url", "https://map.yourserver.com");
+        this.webPublicUrl = plugin.getConfig().getString("web-server.public-url", "http://127.0.0.1:8080");
+        this.language = plugin.getConfig().getString("language", "zh_cn");
     }
 
     public int getMaxImageWidth() {
@@ -117,5 +120,9 @@ public class PluginConfig {
 
     public String getWebPublicUrl() {
         return webPublicUrl;
+    }
+
+    public String getLanguage() {
+        return language;
     }
 }

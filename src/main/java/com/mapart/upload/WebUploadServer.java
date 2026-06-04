@@ -2,6 +2,7 @@ package com.mapart.upload;
 
 import com.mapart.MapArtPlugin;
 import com.mapart.config.PluginConfig;
+import com.mapart.message.MessageManager;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
@@ -92,19 +93,19 @@ public class WebUploadServer {
             token = params.getOrDefault("token", "");
             String msg = params.getOrDefault("msg", "");
             if ("success".equals(msg)) {
-                message = "上传成功！图片已保存，可以返回游戏使用 /mapart gui 查看";
+                message = plugin.getMessageManager().get("web.success");
                 messageType = "success";
             } else if ("invalid".equals(msg)) {
-                message = "无效的令牌，请在游戏中执行 /mapart upload 获取新的链接";
+                message = plugin.getMessageManager().get("web.invalid_token");
                 messageType = "error";
             } else if ("type".equals(msg)) {
-                message = "不支持的文件类型，请上传 PNG/JPG/GIF/BMP/WEBP 格式的图片";
+                message = plugin.getMessageManager().get("web.invalid_type");
                 messageType = "error";
             } else if ("size".equals(msg)) {
-                message = "图片尺寸超过限制 (最大 2048x2048)";
+                message = plugin.getMessageManager().get("web.size_exceeded");
                 messageType = "error";
             } else if ("virus".equals(msg)) {
-                message = "文件验证失败，请确保上传的是有效的图片文件";
+                message = plugin.getMessageManager().get("web.virus_detected");
                 messageType = "error";
             }
         }
@@ -339,6 +340,7 @@ public class WebUploadServer {
 
     private String buildUploadPage(String token, String message, String messageType) {
         String baseUrl = plugin.getPluginConfig().getWebPublicUrl();
+        MessageManager mm = plugin.getMessageManager();
         String msgHtml = "";
         if (!message.isEmpty()) {
             String color = "success".equals(messageType) ? "#4CAF50" : "#f44336";
@@ -349,7 +351,7 @@ public class WebUploadServer {
         return "<!DOCTYPE html>"
                 + "<html lang='zh-CN'><head><meta charset='UTF-8'>"
                 + "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
-                + "<title>MapArt 图片上传</title>"
+                + "<title>" + mm.get("web.title") + "</title>"
                 + "<style>"
                 + "*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}"
                 + "body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a,#1e293b,#0b132b);color:#fff;}"
@@ -381,14 +383,14 @@ public class WebUploadServer {
                 + "</style></head><body>"
                 + "<div class='card'>"
                 + "<h1>🎨 MapArt</h1>"
-                + "<p class='subtitle'>上传图片到服务器生成地图画</p>"
+                + "<p class='subtitle'>" + mm.get("web.subtitle") + "</p>"
                 + msgHtml
                 + "<form id='uploadForm' enctype='multipart/form-data' method='post' action='" + baseUrl + "/upload'>"
                 + "<input type='hidden' name='token' value='" + token + "'>"
                 + "<div class='drop-zone' id='dropZone' onclick='document.getElementById(\"fileInput\").click()'>"
                 + "<div class='drop-zone-icon'>📁</div>"
-                + "<div class='drop-zone-text'>点击选择图片或拖拽到此处</div>"
-                + "<div class='drop-zone-hint'>支持 PNG / JPG / GIF / BMP / WEBP</div>"
+                + "<div class='drop-zone-text'>" + mm.get("web.drop_text") + "</div>"
+                + "<div class='drop-zone-hint'>" + mm.get("web.drop_hint") + "</div>"
                 + "</div>"
                 + "<input type='file' id='fileInput' name='file' accept='image/png,image/jpeg,image/gif,image/bmp,image/webp'>"
                 + "<div class='file-info' id='fileInfo'>"
@@ -396,13 +398,13 @@ public class WebUploadServer {
                 + "<span class='size' id='fileSize'></span>"
                 + "<span class='remove' onclick='removeFile()'>×</span>"
                 + "</div>"
-                + "<button type='submit' class='upload-btn' id='submitBtn' disabled>上传图片</button>"
+                + "<button type='submit' class='upload-btn' id='submitBtn' disabled>" + mm.get("web.upload_btn") + "</button>"
                 + "</form>"
                 + "<div class='loading' id='loading'>"
                 + "<div class='spinner'></div>"
-                + "<span>正在上传...</span>"
+                + "<span>" + mm.get("web.uploading") + "</span>"
                 + "</div>"
-                + "<div class='footer'>MapArt Plugin &copy; 筑梦方舟网络科技工作室</div>"
+                + "<div class='footer'>" + mm.get("web.footer") + "</div>"
                 + "</div>"
                 + "<script>"
                 + "const dropZone=document.getElementById('dropZone');const fileInput=document.getElementById('fileInput');"
@@ -415,8 +417,8 @@ public class WebUploadServer {
                 + "dropZone.addEventListener('dragleave',function(){this.classList.remove('dragover')});"
                 + "dropZone.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f){selectFile(f);fileInput.files=e.dataTransfer.files;}});"
                 + "function selectFile(f){if(!f){return}selectedFile=f;const validTypes=['image/png','image/jpeg','image/gif','image/bmp','image/webp'];"
-                + "if(!validTypes.includes(f.type)){alert('不支持的文件类型');return;}"
-                + "if(f.size>10*1024*1024){alert('文件过大，最大 10MB');return;}"
+                + "if(!validTypes.includes(f.type)){alert('" + mm.get("web.alert_invalid_type") + "');return;}"
+                + "if(f.size>10*1024*1024){alert('" + mm.get("web.alert_file_too_large") + "');return;}"
                 + "fileName.textContent=f.name;const sizes=['B','KB','MB'];let i=0;let sz=f.size;while(sz>=1024&&i<2){sz/=1024;i++}fileSize.textContent=sz.toFixed(1)+sizes[i];"
                 + "fileInfo.classList.add('show');submitBtn.disabled=false;}"
                 + "function removeFile(){selectedFile=null;fileInput.value='';fileInfo.classList.remove('show');submitBtn.disabled=true;}"

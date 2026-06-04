@@ -31,14 +31,14 @@ public class VersionChecker {
 
                 plugin.getServer().getScheduler().runTask(plugin, () -> {
                     if (result < 0) {
-                        plugin.getLogger().warning("========== MapArt 版本更新可用 ==========");
-                        plugin.getLogger().warning("当前版本: v" + localVersion + " | 最新版本: " + remoteVersion);
-                        plugin.getLogger().warning("请前往下载最新版本: " + DOWNLOAD_URL);
+                        plugin.getLogger().warning("========== " + plugin.getMessageManager().get("version.update_header") + " ==========");
+                        plugin.getLogger().warning(String.format(plugin.getMessageManager().get("version.update_current"), localVersion, remoteVersion));
+                        plugin.getLogger().warning(String.format(plugin.getMessageManager().get("version.update_download"), DOWNLOAD_URL));
                         plugin.getLogger().warning("========================================");
                     } else if (result == 0) {
-                        plugin.getLogger().info("[MapArt] 您的插件已是最新版本 (" + localVersion + ")");
+                        plugin.getLogger().info(String.format(plugin.getMessageManager().get("version.up_to_date"), localVersion));
                     } else {
-                        plugin.getLogger().info("[MapArt] 您的插件为测试版插件 (当前: v" + localVersion + ", 官方: " + remoteVersion + ")");
+                        plugin.getLogger().info(String.format(plugin.getMessageManager().get("version.snapshot"), localVersion, remoteVersion));
                     }
                 });
             } catch (Exception e) {

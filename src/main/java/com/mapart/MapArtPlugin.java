@@ -5,6 +5,7 @@ import com.mapart.config.PluginConfig;
 import com.mapart.gui.MapArtGUI;
 import com.mapart.listener.MapRenderListener;
 import com.mapart.manager.MapArtManager;
+import com.mapart.message.MessageManager;
 import com.mapart.telemetry.TelemetryManager;
 import com.mapart.upload.UploadTokenManager;
 import com.mapart.upload.WebUploadServer;
@@ -20,16 +21,15 @@ public final class MapArtPlugin extends JavaPlugin {
     private MapArtGUI gui;
     private UploadTokenManager tokenManager;
     private WebUploadServer webUploadServer;
+    private MessageManager messageManager;
 
     @Override
     public void onEnable() {
-        getLogger().info("🏢筑梦方舟网络科技工作室版权所有 官网： https://www.dreamark.club/");
-        getLogger().info("使用本插件默认您认可我们的隐私政策： https://www.dreamark.club/page.php?slug=privacy");
-        getLogger().info("和用户协议： https://www.dreamark.club/page.php?slug=terms");
-
         saveDefaultConfig();
         config = new PluginConfig(this);
         config.load();
+
+        messageManager = new MessageManager(config.getLanguage());
 
         manager = new MapArtManager(this);
         gui = new MapArtGUI(this);
@@ -93,5 +93,9 @@ public final class MapArtPlugin extends JavaPlugin {
 
     public UploadTokenManager getTokenManager() {
         return tokenManager;
+    }
+
+    public MessageManager getMessageManager() {
+        return messageManager;
     }
 }
