@@ -16,7 +16,7 @@ commands:
 permissions:
   mapart.use:
     description: Allows using map art commands
-    default: op
+    default: true
   mapart.admin:
     description: Admin permissions for MapArt
     default: op
