@@ -147,7 +147,7 @@ public class WebUploadServer {
         }
 
         String token = new String(tokenPart.data, StandardCharsets.UTF_8).trim();
-        UploadTokenManager.TokenInfo tokenInfo = tokenManager.consumeToken(token);
+        UploadTokenManager.TokenInfo tokenInfo = tokenManager.peekToken(token);
         if (tokenInfo == null) {
             redirect(exchange, "?msg=invalid");
             return;
@@ -160,25 +160,25 @@ public class WebUploadServer {
 
         String ext = getExtension(fileName).toLowerCase();
         if (!ALLOWED_EXTENSIONS.contains(ext)) {
-            redirect(exchange, "?msg=type");
+            redirectWithToken(exchange, token, "type");
             return;
         }
 
         if (!validateMagicBytes(filePart.data, ext)) {
-            redirect(exchange, "?msg=virus");
+            redirectWithToken(exchange, token, "virus");
             return;
         }
 
         try (ByteArrayInputStream bais = new ByteArrayInputStream(filePart.data)) {
             BufferedImage img = ImageIO.read(bais);
             if (img == null) {
-                redirect(exchange, "?msg=virus");
+                redirectWithToken(exchange, token, "virus");
                 return;
             }
             int maxW = plugin.getPluginConfig().getMaxImageWidth();
             int maxH = plugin.getPluginConfig().getMaxImageHeight();
             if (img.getWidth() > maxW || img.getHeight() > maxH) {
-                redirect(exchange, "?msg=size");
+                redirectWithToken(exchange, token, "size");
                 return;
             }
         }
@@ -192,9 +192,21 @@ public class WebUploadServer {
         } catch (Exception ignored) {
         }
 
+        // 全部校验通过且文件落盘成功后，才真正消费（删除）token
+        tokenManager.consumeToken(token);
+
         plugin.getLogger().info("Image uploaded by " + tokenInfo.playerName + ": " + safeName + " -> " + dest.getAbsolutePath());
 
         redirect(exchange, "?token=" + token + "&msg=success");
+    }
+
+    /**
+     * 校验失败时重定向回上传页，并保留原 token，
+     * 这样用户可直接在同一页面重新选择文件再次上传，
+     * 无需回到游戏重新执行 /mapart upload 获取新链接。
+     */
+    private void redirectWithToken(HttpExchange exchange, String token, String msg) throws IOException {
+        redirect(exchange, "?token=" + token + "&msg=" + msg);
     }
 
     private boolean validateMagicBytes(byte[] data, String ext) {
